@@ -1,45 +1,49 @@
-require('dotenv').config();
 const express = require('express');
-const Razorpay = require('razorpay');
 const cors = require('cors');
+const Razorpay = require('razorpay');
+require('dotenv').config();
 
 const app = express();
 app.use(cors());
 app.use(express.json());
 
-const PORT = process.env.PORT || 4000;
-
-// Initialize Razorpay instance
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
+  key_id: process.env.RAZORPAY_KEY_ID,       // your live key id
+  key_secret: process.env.RAZORPAY_KEY_SECRET // your live key secret
 });
 
 // Health check
-app.get('/', (req, res) => {
-  res.send('WaveTravel Razorpay backend running!');
-});
+app.get('/', (req, res) => res.send('WaveTravel Razorpay Backend is live!'));
 
-// Create order endpoint
+// Create Razorpay order
 app.post('/create-order', async (req, res) => {
-  const { amount } = req.body;
-  if (!amount || isNaN(amount)) {
-    return res.status(400).json({ error: 'Invalid amount' });
-  }
-
   try {
-    const order = await razorpay.orders.create({
-      amount: amount * 100, // amount in paise
-      currency: 'INR',
-      payment_capture: 1
+    const { amount, currency, receipt } = req.body;
+
+    if (!amount || !currency) {
+      return res.status(400).json({ error: 'Amount and currency are required' });
+    }
+
+    const options = {
+      amount: Number(amount), // in paise
+      currency: currency,
+      receipt: receipt || `rcpt_${Date.now()}`
+    };
+
+    const order = await razorpay.orders.create(options);
+
+    res.json({
+      id: order.id,
+      amount: order.amount,
+      currency: order.currency,
+      key: process.env.RAZORPAY_KEY_ID
     });
-    res.json(order);
   } catch (err) {
-    console.error('Razorpay order creation failed:', err);
-    res.status(500).json({ error: 'Order creation failed' });
+    console.error('Error creating order:', err);
+    res.status(500).json({ error: 'Failed to create order' });
   }
 });
 
-app.listen(PORT, () => {
-  console.log(`Server listening on https://wavetravel-razorpay-backend.onrender.com:${PORT}`);
-});
+// Start server
+const PORT = process.env.PORT || 1000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
