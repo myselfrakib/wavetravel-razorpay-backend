@@ -41,5 +41,5 @@ app.post('/create-order', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Server listening on https://dashboard.render.com/web/srv-d37fo86r433s73ennva0/deploys/dep-d37fo8er433s73ennvig:${PORT}`);
+  console.log(`Server listening on https://wavetravel-razorpay-backend.onrender.com:${PORT}`);
 });
