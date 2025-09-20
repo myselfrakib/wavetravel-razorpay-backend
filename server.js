@@ -1,49 +1,48 @@
+// server.js — Razorpay order server for mobile web / intent flow
 const express = require('express');
-const cors = require('cors');
 const Razorpay = require('razorpay');
+const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
-app.use(cors());
-app.use(express.json());
 
+// Middlewares
+app.use(cors());                // allow cross-origin requests
+app.use(express.json());        // parse JSON bodies
+
+// Initialize Razorpay
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,       // your live key id
-  key_secret: process.env.RAZORPAY_KEY_SECRET // your live key secret
+  key_id: process.env.RZP_KEY_ID,       // your Razorpay public key
+  key_secret: process.env.RZP_KEY_SECRET // your Razorpay secret key
 });
 
-// Health check
-app.get('/', (req, res) => res.send('WaveTravel Razorpay Backend is live!'));
+// Health check endpoint
+app.get('/', (req, res) => res.send('Razorpay Order Server is running'));
 
-// Create Razorpay order
+// Create Order endpoint
 app.post('/create-order', async (req, res) => {
   try {
-    const { amount, currency, receipt } = req.body;
-
-    if (!amount || !currency) {
-      return res.status(400).json({ error: 'Amount and currency are required' });
+    const amount = req.body.amount; // amount in paise
+    if (!amount || isNaN(amount)) {
+      return res.status(400).json({ error: 'Invalid amount' });
     }
 
     const options = {
-      amount: Number(amount), // in paise
-      currency: currency,
-      receipt: receipt || `rcpt_${Date.now()}`
+      amount: parseInt(amount, 10), // Razorpay expects integer in paise
+      currency: 'INR',
+      receipt: `rcpt_${Date.now()}`,
+      payment_capture: 1 // auto-capture payment
     };
 
     const order = await razorpay.orders.create(options);
 
-    res.json({
-      id: order.id,
-      amount: order.amount,
-      currency: order.currency,
-      key: process.env.RAZORPAY_KEY_ID
-    });
+    res.json(order); // return order object to client
   } catch (err) {
-    console.error('Error creating order:', err);
-    res.status(500).json({ error: 'Failed to create order' });
+    console.error('Error creating Razorpay order:', err);
+    res.status(500).json({ error: 'Order creation failed' });
   }
 });
 
 // Start server
-const PORT = process.env.PORT || 1000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Razorpay Order Server running on port ${PORT}`));
